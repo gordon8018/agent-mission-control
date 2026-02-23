@@ -2,6 +2,18 @@
 
 一个面向 OpenClaw 协作场景的任务管理系统：提供任务看板、日历调度、记忆库、Agent 团队管理和运行审计。
 
+<img width="1911" height="858" alt="4b3233ac475d45c1a09c0ddca3eec32c" src="https://github.com/user-attachments/assets/9d8998f9-4477-4d84-aad5-eb24eaf6ae8a" />
+
+<img width="1913" height="895" alt="958833024188ed1f73d58a1e2f34d7f5" src="https://github.com/user-attachments/assets/8da7afe5-28cf-4753-b24c-b9f4f17afc79" />
+
+<img width="1915" height="916" alt="42d30f7bcd3f41bb6387225a10fcf305" src="https://github.com/user-attachments/assets/1e98e9d7-4431-4732-90ca-7de5856dd2f8" />
+
+<img width="1906" height="535" alt="51adb36b1472da99f6d1ee6600dff418" src="https://github.com/user-attachments/assets/c2d10ca6-77dd-4bde-9c60-1a98e1d33485" />
+
+<img width="2125" height="810" alt="de7f5383-1de5-451b-98a5-66c7f3c87696" src="https://github.com/user-attachments/assets/a78143d4-5718-4dd1-b42d-9201f68f4750" />
+
+
+
 ## 1. 系统定位
 
 - 为 OpenClaw 提供可视化任务中控（人类任务 + Agent 任务）
