@@ -1,0 +1,235 @@
+// Mission Control - Prisma Schema
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  BLOCKED
+}
+
+enum EventType {
+  ONE_TIME
+  RECURRING
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum MemorySource {
+  MANUAL
+  TASK_DONE
+  RUN_FINISHED
+}
+
+// Users
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assignedTasks Task[]  @relation("TaskAssignee")
+  createdTasks  Task[]  @relation("TaskCreator")
+  activityLog   Activity[]
+  events        Event[]
+  memories      Memory[]
+  executedRuns  Run[]  @relation("UserRunner")
+
+  @@map("users")
+  @@index([email])
+}
+
+// Agents
+model Agent {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  status         String   @default("idle")
+  config         Json?
+  currentTaskId  String?   @unique
+  artifacts      Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assignedTasks  Task[]  @relation("TaskAssigneeAgent")
+  executedRuns   Run[]   @relation("AgentRunner")
+
+  @@map("agents")
+  @@index([status])
+  @@index([currentTaskId])
+}
+
+// Task Columns
+model TaskColumn {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  position  Int
+  color     String?
+  createdAt DateTime @default(now())
+
+  tasks Task[]
+
+  @@map("task_columns")
+  @@index([position])
+}
+
+// Tasks
+model Task {
+  id               String       @id @default(uuid())
+  title            String
+  description      String?       @db.Text
+  columnId         String
+  position         Int
+  priority         TaskPriority @default(MEDIUM)
+  status           TaskStatus   @default(OPEN)
+
+  assignedToUserId  String?
+  assignedToAgentId String?
+  createdById      String
+
+  dueDate          DateTime?
+  startedAt        DateTime?
+  completedAt       DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  artifacts        Json?
+
+  column           TaskColumn @relation(fields: [columnId], references: [id])
+  assignedToUser   User?        @relation("TaskAssignee", fields: [assignedToUserId], references: [id])
+  assignedToAgent  Agent?       @relation("TaskAssigneeAgent", fields: [assignedToAgentId], references: [id])
+  createdBy        User          @relation("TaskCreator", fields: [createdById], references: [id])
+
+  memories        Memory[]   @relation("MemoriesForTask")
+
+  @@unique([columnId, position])
+  @@index([columnId, status])
+  @@index([assignedToUserId])
+  @@index([assignedToAgentId])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+// Events
+model Event {
+  id          String    @id @default(uuid())
+  title       String
+  description String?   @db.Text
+  eventType   EventType  @default(ONE_TIME)
+  cronExpr    String?
+  enabled     Boolean    @default(true)
+  nextRunAt   DateTime?
+  startAt     DateTime
+  endAt       DateTime?
+  createdBy   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artifacts Json?
+
+  creator User  @relation(fields: [createdBy], references: [id])
+  runs    Run[]
+
+  @@index([eventType, startAt])
+  @@index([enabled, nextRunAt])
+  @@map("events")
+}
+
+// Runs
+model Run {
+  id               String    @id @default(uuid())
+  eventId          String
+  executedByAgentId String?
+  executedByUserId  String?
+  status           RunStatus
+  output           String?   @db.Text
+  error            String?   @db.Text
+  startedAt        DateTime
+  completedAt       DateTime?
+
+  createdAt        DateTime @default(now())
+
+  artifacts        Json?
+
+  event            Event  @relation(fields: [eventId], references: [id])
+  executedByAgent  Agent?  @relation("AgentRunner", fields: [executedByAgentId], references: [id])
+  executedByUser  User?  @relation("UserRunner", fields: [executedByUserId], references: [id])
+
+  memories         Memory[]   @relation("MemoriesForRun")
+
+  @@index([eventId, startedAt])
+  @@index([status])
+  @@map("runs")
+}
+
+// Memories
+model Memory {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @db.Text
+  summary     String?   @db.Text
+  source      MemorySource @default(MANUAL)
+  taskSourceRefId String?
+  runSourceRefId  String?
+  tags        String[]
+  metadata    Json?
+  searchVector Unsupported("tsvector")?
+  createdBy   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artifacts Json?
+
+  creator   User  @relation(fields: [createdBy], references: [id])
+  sourceTask Task?  @relation("MemoriesForTask", fields: [taskSourceRefId], references: [id])
+  sourceRun  Run?  @relation("MemoriesForRun", fields: [runSourceRefId], references: [id])
+
+  @@index([searchVector], type: Gin)
+  @@index([taskSourceRefId, runSourceRefId])
+  @@index([createdAt])
+  @@map("memories")
+}
+
+// Activity Log
+model Activity {
+  id          String   @id @default(uuid())
+  entityType  String
+  entityId    String
+  action      String
+  changes     Json?
+  performedBy String
+
+  createdAt DateTime @default(now())
+
+  performer User @relation(fields: [performedBy], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([performedBy])
+  @@index([createdAt])
+  @@map("activity")
+}
