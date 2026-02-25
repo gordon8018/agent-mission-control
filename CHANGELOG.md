@@ -2,6 +2,15 @@
 
 All notable changes to the Mission Control project.
 
+## [Unreleased]
+
+### 🚧 PR4 - Workflow Policy Engine
+- Added a centralized workflow policy engine (`getTemplate`, `getColumnRules`, `validateMove`) to enforce column/task compatibility, required artifacts, and required gates from DB-backed metadata.
+- Added run-based gate checks that validate successful runs by task/run type when boolean gates are not present on the task payload.
+- Added `pickBestAgent` scoring for auto-assignment based on role, idle-first ranking, capability overlap, and current active load.
+- Updated Kanban move action to run transactionally with policy validation, structured missing gate/artifact errors, automatic role-based assignment, and standardized activity events (`task.moved`, `gate.checked`, `task.assigned`).
+- Removed column-name hardcoding from move flow and switched to metadata-driven status/assignment behavior.
+
 ## [0.3.0] - 2026-02-22
 
 ### 🎉 New Features

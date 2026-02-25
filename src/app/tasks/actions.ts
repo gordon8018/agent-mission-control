@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma, TaskPriority, TaskStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { getColumnRulesById, validateMove } from '@/lib/workflows/policy';
+import { pickBestAgent } from '@/lib/agents/pickBestAgent';
 
 // Helper: Create activity log
 async function logActivity(params: {
@@ -12,8 +14,8 @@ async function logActivity(params: {
   performedBy: string;
   message?: string;
   diff?: Record<string, any>;
-}) {
-  await prisma.activity.create({
+}, db: Prisma.TransactionClient | typeof prisma = prisma) {
+  await db.activity.create({
     data: {
       entityType: params.entityType,
       entityId: params.entityId,
@@ -182,87 +184,220 @@ export async function moveTask(
   },
   performedBy: string
 ) {
-  const oldTask = await prisma.task.findUnique({ where: { id } });
-  if (!oldTask) throw new Error('Task not found');
-
   const { columnId, position } = data;
+  const result = await prisma.$transaction(async (tx) => {
+    const oldTask = await tx.task.findUnique({ where: { id } });
+    if (!oldTask) throw new Error('Task not found');
 
-  // Update positions in old column (if moving to different column or moving within same column)
-  if (oldTask.columnId !== columnId) {
-    // Decrease positions of tasks in old column that were below the moved task
-    await prisma.task.updateMany({
-      where: {
-        columnId: oldTask.columnId,
-        position: { gt: oldTask.position },
-      },
-      data: {
-        position: { decrement: 1 },
-      },
-    });
+    const rawColumns = await tx.$queryRaw<Array<{ row: Record<string, unknown> }>>`
+      SELECT to_jsonb(task_columns) AS row
+      FROM task_columns
+      WHERE id = ${columnId}
+      LIMIT 1
+    `;
+    const rawColumn = rawColumns[0]?.row;
 
-    // Increase positions of tasks in new column that are at or above the new position
-    await prisma.task.updateMany({
-      where: {
-        columnId,
-        position: { gte: position },
+    if (!rawColumn) {
+      throw new Error('Target column not found');
+    }
+
+    const artifacts = ((oldTask.artifacts as Record<string, unknown> | null) ?? {});
+    const taskGates = (artifacts.gates as Record<string, unknown> | undefined) ?? {};
+    const taskType = ((oldTask as unknown as Record<string, unknown>).task_type ??
+      (oldTask as unknown as Record<string, unknown>).taskType ??
+      artifacts.taskType ??
+      artifacts.task_type ??
+      null) as string | null;
+
+    const validation = await validateMove(
+      {
+        id: oldTask.id,
+        taskType,
+        artifacts,
+        gates: taskGates,
       },
-      data: {
-        position: { increment: 1 },
-      },
-    });
-  } else {
-    // Moving within the same column
-    if (position > oldTask.position) {
-      // Moving down: decrease positions of tasks between old and new position
-      await prisma.task.updateMany({
-        where: {
-          columnId,
-          position: { gt: oldTask.position, lte: position },
-          id: { not: id },
+      rawColumn
+    );
+
+    if (!validation.ok) {
+      await logActivity(
+        {
+          entityType: 'task',
+          entityId: id,
+          action: 'gate.checked',
+          performedBy,
+          message: 'Workflow gate check failed',
+          diff: {
+            passed: false,
+            toColumn: columnId,
+            missingArtifacts: validation.missingArtifacts,
+            missingGates: validation.missingGates,
+            incompatibleTaskType: validation.incompatibleTaskType ?? null,
+          },
         },
-        data: { position: { decrement: 1 } },
+        tx
+      );
+
+      return {
+        success: false as const,
+        missingArtifacts: validation.missingArtifacts,
+        missingGates: validation.missingGates,
+        incompatibleTaskType: validation.incompatibleTaskType ?? null,
+      };
+    }
+
+    // Update positions in old column (if moving to different column or moving within same column)
+    if (oldTask.columnId !== columnId) {
+      await tx.task.updateMany({
+        where: {
+          columnId: oldTask.columnId,
+          position: { gt: oldTask.position },
+        },
+        data: {
+          position: { decrement: 1 },
+        },
       });
-    } else if (position < oldTask.position) {
-      // Moving up: increase positions of tasks between old and new position
-      await prisma.task.updateMany({
+
+      await tx.task.updateMany({
         where: {
           columnId,
-          position: { gte: position, lt: oldTask.position },
-          id: { not: id },
+          position: { gte: position },
         },
-        data: { position: { increment: 1 } },
+        data: {
+          position: { increment: 1 },
+        },
+      });
+    } else {
+      if (position > oldTask.position) {
+        await tx.task.updateMany({
+          where: {
+            columnId,
+            position: { gt: oldTask.position, lte: position },
+            id: { not: id },
+          },
+          data: { position: { decrement: 1 } },
+        });
+      } else if (position < oldTask.position) {
+        await tx.task.updateMany({
+          where: {
+            columnId,
+            position: { gte: position, lt: oldTask.position },
+            id: { not: id },
+          },
+          data: { position: { increment: 1 } },
+        });
+      }
+    }
+
+    const targetStatus = typeof rawColumn.status === 'string' ? rawColumn.status : null;
+    const normalizedStatus = targetStatus ? TaskStatus[targetStatus.toUpperCase() as keyof typeof TaskStatus] : null;
+
+    const columnRules = await getColumnRulesById(columnId);
+    const defaultRole = columnRules?.defaultRole ?? null;
+
+    let assignedToAgentId = oldTask.assignedToAgentId;
+    if (defaultRole) {
+      assignedToAgentId = await pickBestAgent({
+        role: defaultRole,
+        task: {
+          id: oldTask.id,
+          taskType,
+          artifacts,
+          requiredCapabilities: Array.isArray(artifacts.requiredCapabilities)
+            ? (artifacts.requiredCapabilities as string[])
+            : undefined,
+          tags: Array.isArray(artifacts.tags) ? (artifacts.tags as string[]) : undefined,
+        },
+        columnRules: {
+          requiredArtifacts: columnRules?.requiredArtifacts ?? [],
+          requiredGates: columnRules?.requiredGates ?? [],
+        },
       });
     }
-  }
 
-  // Update the moved task
-  const task = await prisma.task.update({
-    where: { id },
-    data: { columnId, position },
-    include: {
-      column: true,
-      assignedToUser: { select: { id: true, name: true } },
-      assignedToAgent: { select: { id: true, name: true } },
-    },
+    const task = await tx.task.update({
+      where: { id },
+      data: {
+        columnId,
+        position,
+        ...(normalizedStatus && { status: normalizedStatus }),
+        ...(defaultRole && { assignedToAgentId }),
+      },
+      include: {
+        column: true,
+        assignedToUser: { select: { id: true, name: true } },
+        assignedToAgent: { select: { id: true, name: true } },
+      },
+    });
+
+    await logActivity(
+      {
+        entityType: 'task',
+        entityId: id,
+        action: 'gate.checked',
+        performedBy,
+        message: 'Workflow gate check passed',
+        diff: {
+          passed: true,
+          toColumn: columnId,
+          checkedArtifacts: columnRules?.requiredArtifacts ?? [],
+          checkedGates: columnRules?.requiredGates ?? [],
+        },
+      },
+      tx
+    );
+
+    await logActivity(
+      {
+        entityType: 'task',
+        entityId: id,
+        action: 'task.moved',
+        performedBy,
+        message: `Moved task "${task.title}"`,
+        diff: {
+          fromColumn: oldTask.columnId,
+          toColumn: columnId,
+          fromPosition: oldTask.position,
+          toPosition: position,
+          fromStatus: oldTask.status,
+          toStatus: task.status,
+        },
+      },
+      tx
+    );
+
+    if (defaultRole && assignedToAgentId) {
+      await logActivity(
+        {
+          entityType: 'task',
+          entityId: id,
+          action: 'task.assigned',
+          performedBy,
+          message: `Task auto-assigned for role ${defaultRole}`,
+          diff: {
+            role: defaultRole,
+            assignedToAgentId,
+          },
+        },
+        tx
+      );
+    }
+
+    return {
+      success: true as const,
+      task,
+      status: task.status,
+      oldStatus: oldTask.status,
+    };
   });
 
-  // Determine new status based on column name
-  const column = await prisma.taskColumn.findUnique({ where: { id: columnId } });
-  let newStatus = task.status;
-  if (column) {
-    if (column.name === 'Done') newStatus = TaskStatus.DONE;
-    else if (column.name === 'In Progress') newStatus = TaskStatus.IN_PROGRESS;
-    else if (column.name === 'Blocked') newStatus = TaskStatus.BLOCKED;
-    else newStatus = TaskStatus.OPEN;
-
-    await prisma.task.update({
-      where: { id },
-      data: { status: newStatus },
-    });
+  if (!result.success) {
+    revalidatePath('/tasks');
+    return result;
   }
 
   // Auto-generate memory when task is completed
-  if (newStatus === TaskStatus.DONE && task.status !== TaskStatus.DONE) {
+  if (result.status === TaskStatus.DONE && result.oldStatus !== TaskStatus.DONE) {
     try {
       const { generateTaskDoneMemory } = await import('../memory/actions');
       await generateTaskDoneMemory(id, 'system-worker');
@@ -272,25 +407,8 @@ export async function moveTask(
     }
   }
 
-  // Log activity
-  await logActivity({
-    entityType: 'task',
-    entityId: id,
-    action: 'move',
-    performedBy,
-    message: `Moved task "${task.title}"`,
-    diff: {
-      fromColumn: oldTask.columnId,
-      toColumn: columnId,
-      fromPosition: oldTask.position,
-      toPosition: position,
-      fromStatus: oldTask.status,
-      toStatus: newStatus,
-    },
-  });
-
   revalidatePath('/tasks');
-  return { success: true, task, status: newStatus };
+  return { success: true, task: result.task, status: result.status };
 }
 
 // ADD ARTIFACT TO TASK
