@@ -44,6 +44,13 @@ enum MemorySource {
   RUN_FINISHED
 }
 
+enum OpenClawLinkStatus {
+  UNLINKED
+  LINKED
+  INVALID
+  UNKNOWN
+}
+
 // Users
 model User {
   id            String   @id @default(uuid())
@@ -68,6 +75,8 @@ model Agent {
   id             String   @id @default(uuid())
   name           String   @unique
   status         String   @default("idle")
+  openclawAgentId String?
+  openclawLinkStatus OpenClawLinkStatus @default(UNLINKED)
   config         Json?
   currentTaskId  String?   @unique
   artifacts      Json?
@@ -80,6 +89,7 @@ model Agent {
   @@map("agents")
   @@index([status])
   @@index([currentTaskId])
+  @@index([openclawAgentId])
 }
 
 // Task Columns
