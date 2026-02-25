@@ -2,6 +2,22 @@
 
 All notable changes to the Mission Control project.
 
+## [Unreleased]
+
+### PR1 - Workflows + OpenClaw Mapping
+
+#### Database
+- Added `TaskType` enum (`DEV`, `RESEARCH`) and applied it to `tasks` (`taskType`, default `DEV`).
+- Extended `tasks` with workflow payload fields: `artifacts` (jsonb, default `[]`) and `gates` (jsonb, default `{}`).
+- Added `WorkflowTemplate` / `workflow_templates` model-table with `stages` and `stageRules` jsonb fields.
+- Extended `task_columns` with `taskType`, `defaultRole`, `requiredArtifacts`, and `requiredGates`, plus index on (`taskType`, `position`).
+- Extended `agents` with OpenClaw mapping fields: `openclawAgentId`, `openclawLinkStatus`, and `openclawLastValidatedAt`.
+- Added indexes for `agents.openclawAgentId` and `agents.openclawLinkStatus`.
+
+#### Documentation
+- Added OpenClaw linking skeleton doc describing many-to-one mapping semantics.
+- Added planned activity action stubs for gate/task-blocking and OpenClaw link lifecycle actions.
+
 ## [0.3.0] - 2026-02-22
 
 ### 🎉 New Features
