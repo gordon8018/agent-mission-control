@@ -17,7 +17,7 @@ type UpdatePayload = {
 
 export async function POST(
   request: Request,
-  { params }: { params: { runId: string } }
+  { params }: { params: Promise<{ runId: string }> }
 ) {
   try {
     if (!isValidOrchestratorToken(request)) {
@@ -25,8 +25,9 @@ export async function POST(
     }
 
     const payload = (await request.json()) as UpdatePayload;
+    const { runId } = await params;
     const run = await prisma.swarmRun.findUnique({
-      where: { id: params.runId },
+      where: { id: runId },
       include: {
         task: {
           select: {

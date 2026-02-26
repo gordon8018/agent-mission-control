@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getEvents } from '../actions';
+import { getEvents } from '@/app/calendar/actions';
 
 export async function GET(request: Request) {
   try {
@@ -34,15 +34,15 @@ export async function POST(request: Request) {
 
     switch (action) {
       case 'create': {
-        const result = await import('../actions').then(m => m.createEvent(data));
+        const result = await import('@/app/calendar/actions').then(m => m.createEvent(data));
         return NextResponse.json(result);
       }
       case 'update': {
-        const result = await import('../actions').then(m => m.updateEvent(data.id, data, data.performedBy));
+        const result = await import('@/app/calendar/actions').then(m => m.updateEvent(data.id, data, data.performedBy));
         return NextResponse.json(result);
       }
       case 'delete': {
-        const result = await import('../actions').then(m => m.deleteEvent(data.id, data.performedBy));
+        const result = await import('@/app/calendar/actions').then(m => m.deleteEvent(data.id, data.performedBy));
         return NextResponse.json(result);
       }
       default:

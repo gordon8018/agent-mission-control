@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Save, Trash2, Plus, FileText, Calendar, Tag, User, Bot, Clock, Flag, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Save, Trash2, Plus, FileText, Calendar, Tag, User, Bot, Clock, CheckCircle, Circle, AlertCircle, Play } from 'lucide-react';
 import { Task, TaskPriority, TaskStatus } from '@prisma/client';
 
 interface TaskDetailDrawerProps {
@@ -28,6 +28,33 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
     task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [mcAgents, setMcAgents] = useState<Array<{ id: string; name: string; openclawAgentId: string | null; openclawLinkStatus: string }>>([]);
+  const [selectedMcAgentId, setSelectedMcAgentId] = useState('');
+  const [manualOpenClawAgentId, setManualOpenClawAgentId] = useState('');
+  const [isStartingSwarm, setIsStartingSwarm] = useState(false);
+  const [swarmMessage, setSwarmMessage] = useState<string | null>(null);
+  const [swarmError, setSwarmError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    void fetch('/api/agents')
+      .then((res) => res.json())
+      .then((agents) => {
+        if (!Array.isArray(agents)) return;
+        setMcAgents(
+          agents.map((agent) => ({
+            id: agent.id,
+            name: agent.name,
+            openclawAgentId: agent.openclawAgentId ?? null,
+            openclawLinkStatus: agent.openclawLinkStatus ?? 'UNLINKED',
+          }))
+        );
+      })
+      .catch((error) => {
+        console.error('Failed to load MC agents for swarm start:', error);
+      });
+  }, [isOpen]);
 
   const tags = (task.artifacts as any)?.tags || [];
   const artifacts = (task.artifacts as any)?.artifacts || [];
@@ -53,6 +80,50 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
     if (confirm('Are you sure you want to delete this task?')) {
       await onDelete(task.id);
       onClose();
+    }
+  };
+
+  const handleStartSwarm = async () => {
+    setSwarmMessage(null);
+    setSwarmError(null);
+
+    const selectedAgent = mcAgents.find((agent) => agent.id === selectedMcAgentId);
+    const hasMappedAgent = Boolean(selectedAgent?.openclawAgentId?.trim());
+    const manualInput = manualOpenClawAgentId.trim();
+
+    if (!hasMappedAgent && !manualInput) {
+      setSwarmError('No OpenClaw mapping selected. Choose an MC Agent with a link or enter an OpenClaw agent id.');
+      return;
+    }
+
+    setIsStartingSwarm(true);
+    try {
+      const response = await fetch('/api/swarm/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: task.id,
+          mcAgentId: selectedMcAgentId || undefined,
+          openclawAgentId: manualInput || undefined,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        setSwarmError(result.error || 'Failed to start swarm run.');
+        return;
+      }
+
+      if (result.blocked) {
+        setSwarmError(result.blockReason || 'Swarm run is blocked due to missing OpenClaw mapping.');
+      } else {
+        setSwarmMessage(`Swarm run started (${result.runId}) with OpenClaw agent ${result.orchestratorAgentId}.`);
+      }
+    } catch (error) {
+      console.error('Failed to start swarm run:', error);
+      setSwarmError('Failed to start swarm run.');
+    } finally {
+      setIsStartingSwarm(false);
     }
   };
 
@@ -266,6 +337,49 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
         </div>
 
         {/* Metadata */}
+        <div className="pt-4 border-t">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">Swarm Orchestrator</label>
+            <button
+              onClick={handleStartSwarm}
+              disabled={isStartingSwarm}
+              className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Play className="h-4 w-4" />
+              {isStartingSwarm ? 'Starting...' : 'Start Swarm'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            Select an MC Agent mapping (many MC Agents can point to one OpenClaw id) or enter an OpenClaw id directly.
+          </p>
+
+          <label className="block text-xs font-medium text-gray-600 mb-1">MC Agent</label>
+          <select
+            value={selectedMcAgentId}
+            onChange={(e) => setSelectedMcAgentId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">No MC Agent selected</option>
+            {mcAgents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name} — {agent.openclawLinkStatus} {agent.openclawAgentId ? `(${agent.openclawAgentId})` : '(no OpenClaw ID)'}
+              </option>
+            ))}
+          </select>
+
+          <label className="block text-xs font-medium text-gray-600 mt-3 mb-1">OpenClaw Agent ID (override)</label>
+          <input
+            type="text"
+            value={manualOpenClawAgentId}
+            onChange={(e) => setManualOpenClawAgentId(e.target.value)}
+            placeholder="oc-agent-123"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+
+          {swarmMessage && <p className="mt-3 text-sm text-green-600">{swarmMessage}</p>}
+          {swarmError && <p className="mt-3 text-sm text-red-600">{swarmError}</p>}
+        </div>
+
         <div className="pt-4 border-t">
           <p className="text-xs text-gray-400">
             Created {task.createdAt ? new Date(task.createdAt).toLocaleString() : 'Unknown'} by {task.createdBy?.name || 'Unknown'}

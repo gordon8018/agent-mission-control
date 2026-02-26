@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getMemories } from '../actions';
+import { getMemories } from '@/app/memory/actions';
 
 export async function GET(request: Request) {
   try {
@@ -32,17 +32,17 @@ export async function POST(request: Request) {
 
     switch (action) {
       case 'create': {
-        const { createMemory } = await import('../actions');
+        const { createMemory } = await import('@/app/memory/actions');
         const result = await createMemory(data);
         return NextResponse.json(result);
       }
       case 'update': {
-        const { updateMemory } = await import('../actions');
+        const { updateMemory } = await import('@/app/memory/actions');
         const result = await updateMemory(data.id, data, data.performedBy);
         return NextResponse.json(result);
       }
       case 'delete': {
-        const { deleteMemory } = await import('../actions');
+        const { deleteMemory } = await import('@/app/memory/actions');
         const result = await deleteMemory(data.id, data.performedBy);
         return NextResponse.json(result);
       }

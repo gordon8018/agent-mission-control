@@ -4,10 +4,10 @@ import { logSwarmActivity } from '@/lib/swarm/activity';
 
 export async function POST(
   _request: Request,
-  { params }: { params: { runId: string } }
+  { params }: { params: Promise<{ runId: string }> }
 ) {
   try {
-    const runId = params.runId;
+    const { runId } = await params;
 
     const existingRun = await prisma.swarmRun.findUnique({
       where: { id: runId },

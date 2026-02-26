@@ -3,6 +3,18 @@
 All notable changes to the Mission Control project.
 
 
+### 🚧 PR4 - Swarm start OpenClaw mapping integration
+- Updated `POST /api/swarm/start` to accept optional `mcAgentId` and `openclawAgentId`.
+- Added mapping resolution logic: when `mcAgentId` is provided, Mission Control resolves `Agent.openclawAgentId` and stores it on the run.
+- Extended `SwarmRun` with `orchestrator_agent_id` and `block_reason`; run creation now succeeds even when unresolved, but marks the run blocked with `"No OpenClaw agent linked"`.
+- Added swarm mapping activity event (`swarm.mapping_selected`) and enriched `swarm.run_created` payload details.
+- Added task detail UI controls to start swarm with:
+  - MC Agent dropdown showing link status/OpenClaw id
+  - direct OpenClaw agent id override input
+  - explicit mapping error when starting without a valid mapping
+- Added SQL migration `20260226_pr4_swarm_openclaw_mapping.sql` for new `swarm_runs` columns/index.
+
+
 
 ### 🚧 PR1 - Swarm orchestration data model + baseline APIs
 - Added Prisma swarm orchestration enums and models: `SwarmRun`, `SwarmWorktree`, `SwarmSession`, `SwarmPR`, `SwarmCheck`, and `OrchestratorSetting`.

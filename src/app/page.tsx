@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNowLocal } from '@/lib/utils';
 import { PageLayout } from '@/components/page-layout';
 
 interface DashboardStats {
@@ -78,7 +78,7 @@ export default function Home() {
                     key={activity.id}
                     action={activity.action}
                     description={getActivityDescription(activity)}
-                    time={formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                    time={formatDistanceToNowLocal(new Date(activity.createdAt), { addSuffix: true })}
                     performer={activity.performer.name}
                   />
                 ))
