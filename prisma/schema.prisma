@@ -347,6 +347,7 @@ model SwarmWorktree {
   swarmRun SwarmRun @relation(fields: [swarmRunId], references: [id])
 
   @@index([swarmRunId])
+  @@unique([swarmRunId, branch])
   @@map("swarm_worktrees")
 }
 
@@ -362,6 +363,7 @@ model SwarmSession {
   swarmRun SwarmRun @relation(fields: [swarmRunId], references: [id])
 
   @@index([swarmRunId])
+  @@unique([swarmRunId, externalId])
   @@map("swarm_sessions")
 }
 
@@ -380,6 +382,7 @@ model SwarmPR {
   swarmRun SwarmRun    @relation(fields: [swarmRunId], references: [id])
   checks   SwarmCheck[]
 
+  @@unique([prNumber])
   @@index([prNumber])
   @@index([status])
   @@map("swarm_prs")

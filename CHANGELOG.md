@@ -2,6 +2,17 @@
 
 All notable changes to the Mission Control project.
 
+### 🚧 PR5 - OpenClaw orchestrator ingestion endpoints
+- Added authenticated ingestion endpoints for orchestrator push updates:
+  - `POST /api/swarm/[runId]/worktree`
+  - `POST /api/swarm/[runId]/session`
+  - `POST /api/swarm/[runId]/pr`
+  - `POST /api/swarm/[runId]/checks`
+- Implemented idempotent upsert behavior for critical keys: `(runId, branch)`, `(runId, tmuxSessionName)`, and `prNumber`.
+- Added DB unique indexes to enforce idempotency at persistence layer.
+- Added orchestrator ingestion API documentation at `docs/swarm/orchestrator_api.md`.
+- Reduced activity spam by writing swarm activity entries only for significant state changes.
+
 
 ### 🚧 PR4 - Swarm start OpenClaw mapping integration
 - Updated `POST /api/swarm/start` to accept optional `mcAgentId` and `openclawAgentId`.
