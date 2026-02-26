@@ -399,12 +399,14 @@ model SwarmCheck {
 }
 
 model OrchestratorSetting {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  value     String
-  metadata  Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  key                String   @unique
+  value              String
+  screenshotRequired Boolean  @default(false)
+  requiredReviews    Json     @default("{\"codex\":true,\"gemini\":false,\"claude\":false}")
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@map("orchestrator_settings")
 }
