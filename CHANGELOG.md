@@ -2,9 +2,14 @@
 
 All notable changes to the Mission Control project.
 
-## [0.3.1] - 2026-02-25
 
-### 🎉 New Features
+### 🚧 PR4 - Workflow Policy Engine
+- Added a centralized workflow policy engine (`getTemplate`, `getColumnRules`, `validateMove`) to enforce column/task compatibility, required artifacts, and required gates from DB-backed metadata.
+- Added run-based gate checks that validate successful runs by task/run type when boolean gates are not present on the task payload.
+- Added `pickBestAgent` scoring for auto-assignment based on role, idle-first ranking, capability overlap, and current active load.
+- Updated Kanban move action to run transactionally with policy validation, structured missing gate/artifact errors, automatic role-based assignment, and standardized activity events (`task.moved`, `gate.checked`, `task.assigned`).
+- Removed column-name hardcoding from move flow and switched to metadata-driven status/assignment behavior.
+
 
 #### OpenClaw Integration (PR3)
 - Added OpenClaw provider abstraction (`provider`, `httpProvider`, `mockProvider`) for read-only agent validation/listing
@@ -18,8 +23,6 @@ All notable changes to the Mission Control project.
 - Added activity log diffs for OpenClaw link lifecycle changes
 - Added SQL migration file `20260225_openclaw_agent_linking.sql`
 
----
-## [Unreleased]
 
 ### ✨ PR2 - Workflow seed for shared/dev/research flows
 - Added `prisma/seed-workflows.ts` to seed shared columns (`Backlog`, `Ready`, `Blocked`, `Done`) with `task_type = null` and deterministic `ord`.
