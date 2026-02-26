@@ -11,6 +11,19 @@ All notable changes to the Mission Control project.
 - Added idempotent seeding for workflow templates: `Dev Flow` and `Research Flow`, referencing seeded stage column IDs and stage rules.
 - Added `npm run db:seed-workflows` script and README instructions for running the workflow seed.
 - Added initial flow docs in `docs/workflows/dev_flow.md` and `docs/workflows/research_flow.md`.
+### PR1 - Workflows + OpenClaw Mapping
+
+#### Database
+- Added `TaskType` enum (`DEV`, `RESEARCH`) and applied it to `tasks` (`taskType`, default `DEV`).
+- Extended `tasks` with workflow payload fields: `artifacts` (jsonb, default `[]`) and `gates` (jsonb, default `{}`).
+- Added `WorkflowTemplate` / `workflow_templates` model-table with `stages` and `stageRules` jsonb fields.
+- Extended `task_columns` with `taskType`, `defaultRole`, `requiredArtifacts`, and `requiredGates`, plus index on (`taskType`, `position`).
+- Extended `agents` with OpenClaw mapping fields: `openclawAgentId`, `openclawLinkStatus`, and `openclawLastValidatedAt`.
+- Added indexes for `agents.openclawAgentId` and `agents.openclawLinkStatus`.
+
+#### Documentation
+- Added OpenClaw linking skeleton doc describing many-to-one mapping semantics.
+- Added planned activity action stubs for gate/task-blocking and OpenClaw link lifecycle actions.
 
 ## [0.3.0] - 2026-02-22
 
