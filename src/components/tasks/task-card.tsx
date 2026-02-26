@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Clock, User, Bot, AlertCircle, Tag, MoreHorizontal, CheckCircle, Circle } from 'lucide-react';
 import { Task } from '@prisma/client';
 import { TaskPriority, TaskStatus } from '@prisma/client';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNowLocal } from '@/lib/utils';
 
 interface TaskCardProps {
   task: Task & {
@@ -164,7 +164,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           >
             <Clock className="h-3 w-3" />
             {isOverdue && <AlertCircle className="h-3 w-3" />}
-            <span>{formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}</span>
+            <span>{formatDistanceToNowLocal(new Date(task.dueDate), { addSuffix: true })}</span>
           </div>
         )}
       </div>

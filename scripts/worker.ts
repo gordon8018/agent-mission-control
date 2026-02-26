@@ -165,7 +165,7 @@ async function processCronEvent(eventId: string) {
   // Auto-generate memory for finished run
   if (status === 'SUCCESS') {
     try {
-      const { generateRunFinishedMemory } = await import('../memory/actions');
+      const { generateRunFinishedMemory } = await import('../src/app/memory/actions');
       await generateRunFinishedMemory(run.id, 'system-worker');
     } catch (error) {
       console.error('Failed to auto-generate memory for finished run:', error);

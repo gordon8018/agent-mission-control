@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function logSwarmActivity(params: {
   entityId: string;
-  action: 'swarm.run_created' | 'swarm.status_updated';
+  action: 'swarm.run_created' | 'swarm.status_updated' | 'swarm.mapping_selected';
   performedBy: string;
   changes?: unknown;
 }) {

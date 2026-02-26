@@ -29,16 +29,17 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
+    const { id } = await params;
     const { action, performedBy, ...data } = body;
 
     switch (action) {
       case 'trigger': {
         // Manually trigger an event (create run)
-        const event = await prisma.event.findUnique({ where: { id: params.id } });
+        const event = await prisma.event.findUnique({ where: { id } });
         if (!event) {
           return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         }
