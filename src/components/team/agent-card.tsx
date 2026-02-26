@@ -49,6 +49,13 @@ const statusColors = {
   },
 };
 
+const openclawStatusStyle = {
+  LINKED: 'bg-green-100 text-green-700 border-green-200',
+  UNLINKED: 'bg-gray-100 text-gray-700 border-gray-200',
+  INVALID: 'bg-red-100 text-red-700 border-red-200',
+  UNKNOWN: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+};
+
 export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
   const config = agent.config as any;
   const role = config?.role || 'agent';
@@ -56,6 +63,7 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
   const currentTask = agent.assignedTasks?.[0];
 
   const statusStyle = statusColors[agent.status as keyof typeof statusColors] || statusColors.idle;
+  const linkStatus = (agent as any).openclawLinkStatus || 'UNLINKED';
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
@@ -99,6 +107,12 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
       <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
         {statusStyle.icon}
         <span className="capitalize">{agent.status}</span>
+      </div>
+
+      {/* OpenClaw Link Badge */}
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-4 border ${openclawStatusStyle[linkStatus as keyof typeof openclawStatusStyle] || openclawStatusStyle.UNLINKED}`}>
+        <span>OpenClaw:</span>
+        <span className="capitalize">{linkStatus.toLowerCase()}</span>
       </div>
 
       {/* Capabilities */}

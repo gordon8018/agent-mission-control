@@ -2,6 +2,23 @@
 
 All notable changes to the Mission Control project.
 
+## [0.3.1] - 2026-02-25
+
+### 🎉 New Features
+
+#### OpenClaw Integration (PR3)
+- Added OpenClaw provider abstraction (`provider`, `httpProvider`, `mockProvider`) for read-only agent validation/listing
+- Added Mission Control server actions to link/unlink/validate OpenClaw agent IDs with many-to-one mapping support
+- Added OpenClaw link status badges and management controls in Team UI (link, unlink, validate, optional select modal)
+- Added optional “Also linked by” panel for other MC agents sharing the same OpenClaw ID
+- Added integration assumptions documentation in `docs/integrations/openclaw.md`
+
+### 🔧 Technical Changes
+- Added `Agent.openclawAgentId` + `Agent.openclawLinkStatus` and index
+- Added activity log diffs for OpenClaw link lifecycle changes
+- Added SQL migration file `20260225_openclaw_agent_linking.sql`
+
+---
 ## [Unreleased]
 
 ### ✨ PR2 - Workflow seed for shared/dev/research flows
