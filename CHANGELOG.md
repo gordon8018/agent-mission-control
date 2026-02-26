@@ -15,6 +15,19 @@ All notable changes to the Mission Control project.
 - Added SQL migration `20260226_pr4_swarm_openclaw_mapping.sql` for new `swarm_runs` columns/index.
 
 
+### 🚧 PR3 - Swarm Definition-of-Done evaluation
+- Added deterministic DoD evaluation module at `src/lib/swarm/dod.ts` that computes granular checks and an `overallReady` gate.
+- Added API endpoint `POST /api/swarm/[prId]/evaluate` to evaluate DoD inputs and persist each evaluation snapshot to `swarm_checks`.
+- Added `OrchestratorSetting` fields for DoD policy control: `screenshotRequired` and `requiredReviews` (`codex/gemini/claude`).
+- Added SQL migration `20260226_pr3_dod_evaluation.sql` and unit tests for DoD evaluation behavior.
+
+
+### ✨ PR2 - Swarm read-only UI screens
+- Added `/swarm` dashboard page with sections for Active Runs, PR Queue, Ready to Merge, and Failures.
+- Added `/swarm/[id]` detail page showing worktrees, sessions, PR metadata, checks, and last errors.
+- Added reusable Swarm UI components: `SwarmRunCard`, `SwarmRunStatusBadge`, `SwarmPRCard`, and `SwarmChecksPanel`.
+- Added Swarm route handlers and batched data query helpers with fallback seeded dummy data when Swarm tables are unavailable.
+- Added Swarm entry in the primary sidebar navigation.
 
 ### 🚧 PR1 - Swarm orchestration data model + baseline APIs
 - Added Prisma swarm orchestration enums and models: `SwarmRun`, `SwarmWorktree`, `SwarmSession`, `SwarmPR`, `SwarmCheck`, and `OrchestratorSetting`.

@@ -15,6 +15,7 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
     { name: 'Calendar', href: '/calendar', icon: require('lucide-react').Calendar, current: currentPath === '/calendar' },
     { name: 'Memory', href: '/memory', icon: require('lucide-react').Brain, current: currentPath === '/memory' },
     { name: 'Team', href: '/team', icon: require('lucide-react').Users, current: currentPath === '/team' },
+    { name: 'Swarm', href: '/swarm', icon: require('lucide-react').Bot, current: currentPath === '/swarm' || currentPath.startsWith('/swarm/') },
   ];
 
   return (
