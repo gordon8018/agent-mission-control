@@ -2,7 +2,6 @@
 
 All notable changes to the Mission Control project.
 
-## [Unreleased]
 
 ### 🚧 PR4 - Workflow Policy Engine
 - Added a centralized workflow policy engine (`getTemplate`, `getColumnRules`, `validateMove`) to enforce column/task compatibility, required artifacts, and required gates from DB-backed metadata.
@@ -10,6 +9,41 @@ All notable changes to the Mission Control project.
 - Added `pickBestAgent` scoring for auto-assignment based on role, idle-first ranking, capability overlap, and current active load.
 - Updated Kanban move action to run transactionally with policy validation, structured missing gate/artifact errors, automatic role-based assignment, and standardized activity events (`task.moved`, `gate.checked`, `task.assigned`).
 - Removed column-name hardcoding from move flow and switched to metadata-driven status/assignment behavior.
+
+
+#### OpenClaw Integration (PR3)
+- Added OpenClaw provider abstraction (`provider`, `httpProvider`, `mockProvider`) for read-only agent validation/listing
+- Added Mission Control server actions to link/unlink/validate OpenClaw agent IDs with many-to-one mapping support
+- Added OpenClaw link status badges and management controls in Team UI (link, unlink, validate, optional select modal)
+- Added optional “Also linked by” panel for other MC agents sharing the same OpenClaw ID
+- Added integration assumptions documentation in `docs/integrations/openclaw.md`
+
+### 🔧 Technical Changes
+- Added `Agent.openclawAgentId` + `Agent.openclawLinkStatus` and index
+- Added activity log diffs for OpenClaw link lifecycle changes
+- Added SQL migration file `20260225_openclaw_agent_linking.sql`
+
+
+### ✨ PR2 - Workflow seed for shared/dev/research flows
+- Added `prisma/seed-workflows.ts` to seed shared columns (`Backlog`, `Ready`, `Blocked`, `Done`) with `task_type = null` and deterministic `ord`.
+- Added dev flow columns and constraints metadata (`required_artifacts`, `required_gates`) for `In Dev`, `In Review`, `In Test`, and `In Deploy`.
+- Added research flow columns for `Scoping`, `Researching`, `Synthesis`, and `Review`, including required artifacts for synthesis/review stages.
+- Added idempotent seeding for workflow templates: `Dev Flow` and `Research Flow`, referencing seeded stage column IDs and stage rules.
+- Added `npm run db:seed-workflows` script and README instructions for running the workflow seed.
+- Added initial flow docs in `docs/workflows/dev_flow.md` and `docs/workflows/research_flow.md`.
+### PR1 - Workflows + OpenClaw Mapping
+
+#### Database
+- Added `TaskType` enum (`DEV`, `RESEARCH`) and applied it to `tasks` (`taskType`, default `DEV`).
+- Extended `tasks` with workflow payload fields: `artifacts` (jsonb, default `[]`) and `gates` (jsonb, default `{}`).
+- Added `WorkflowTemplate` / `workflow_templates` model-table with `stages` and `stageRules` jsonb fields.
+- Extended `task_columns` with `taskType`, `defaultRole`, `requiredArtifacts`, and `requiredGates`, plus index on (`taskType`, `position`).
+- Extended `agents` with OpenClaw mapping fields: `openclawAgentId`, `openclawLinkStatus`, and `openclawLastValidatedAt`.
+- Added indexes for `agents.openclawAgentId` and `agents.openclawLinkStatus`.
+
+#### Documentation
+- Added OpenClaw linking skeleton doc describing many-to-one mapping semantics.
+- Added planned activity action stubs for gate/task-blocking and OpenClaw link lifecycle actions.
 
 ## [0.3.0] - 2026-02-22
 

@@ -96,6 +96,7 @@ cp .env.example .env
 npm run db:generate
 npm run db:push
 npm run db:seed
+npm run db:seed-workflows
 ```
 
 ### 6.3 启动服务
@@ -114,6 +115,21 @@ npm run worker
 npm run db:studio
 npm run lint
 ```
+
+### 6.4 Workflow Seeds（PR2）
+
+新增 `prisma/seed-workflows.ts` 用于初始化共享列、开发流和研究流模板（幂等 upsert，可重复执行）：
+
+```bash
+npm run db:seed-workflows
+```
+
+会写入：
+
+- 共享列（`task_type = null`）：`Backlog`、`Ready`、`Blocked`、`Done`
+- 开发流列（`task_type = 'dev'`）：`In Dev`、`In Review`、`In Test`、`In Deploy`
+- 研究流列（`task_type = 'research'`）：`Scoping`、`Researching`、`Synthesis`、`Review`
+- 工作流模板：`Dev Flow`、`Research Flow`
 
 ## 7. OpenClaw 集成建议
 

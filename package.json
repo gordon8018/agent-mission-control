@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
+    "db:seed-workflows": "tsx prisma/seed-workflows.ts",
     "db:seed-calendar": "node prisma/seed-events.js",
     "db:seed-calendar-memory": "node prisma/seed-calendar-memory.js",
     "db:seed-agents": "node prisma/seed-agents.js",

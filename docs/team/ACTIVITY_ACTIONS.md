@@ -55,6 +55,17 @@
 
 ---
 
+### Planned PR1 Additions (Workflow Gates + OpenClaw Linking)
+- `gate.checked` - When a workflow/task gate is evaluated or marked complete
+- `task.blocked` - When a task is blocked due to unmet gates/artifacts
+- `agent.openclaw_linked` - When an agent is linked to an OpenClaw agent id
+- `agent.openclaw_unlinked` - When an OpenClaw link is removed
+- `agent.openclaw_relinked` - When an agent mapping changes from one OpenClaw id to another
+- `agent.openclaw_validation_succeeded` - When external OpenClaw validation succeeds
+- `agent.openclaw_validation_failed` - When external OpenClaw validation fails
+
+---
+
 ## Diff Format Standards
 
 ### Minimal Diff (for simple updates)

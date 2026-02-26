@@ -1,15 +1,32 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Users, Building2, X, Search, Filter } from 'lucide-react';
+import { Plus, Users, Building2, X, Search, Filter, Link2, Unlink2, CheckCircle2 } from 'lucide-react';
 import { PageLayout } from '@/components/page-layout';
 import { AgentCard } from '@/components/team/agent-card';
 import { AgentRoleGroup } from '@/components/team/agent-role-group';
 import { AgentOfficeGrid } from '@/components/team/agent-office-grid';
 import { CreateAgentDialog } from '@/components/team/create-agent-dialog';
 import { AssignTaskDialog } from '@/components/team/assign-task-dialog';
-import { QuickAssignToAgent } from '@/components/team/quick-assign-to-agent';
-import { createAgent, updateAgent, deleteAgent, getAgentsGroupedByRole, quickAssignTask } from './actions';
+import {
+  createAgent,
+  updateAgent,
+  deleteAgent,
+  quickAssignTask,
+  linkOpenClawAgent,
+  unlinkOpenClawAgent,
+  validateOpenClawAgentLink,
+  listOpenClawAgents,
+} from './actions';
+
+const PERFORMED_BY = 'admin-user-placeholder';
+
+const openClawLinkStatusLabels: Record<string, string> = {
+  LINKED: 'Linked',
+  UNLINKED: 'Unlinked',
+  INVALID: 'Invalid',
+  UNKNOWN: 'Unknown',
+};
 
 export default function TeamPage() {
   const [agents, setAgents] = useState<any[]>([]);
@@ -20,10 +37,23 @@ export default function TeamPage() {
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOfficeOpen, setIsOfficeOpen] = useState(false);
+  const [openclawAgentIdInput, setOpenclawAgentIdInput] = useState('');
+  const [openclawOptions, setOpenclawOptions] = useState<Array<{ id: string; name?: string }>>([]);
+  const [isOpenClawModalOpen, setIsOpenClawModalOpen] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
 
   useEffect(() => {
     fetchAgents();
   }, []);
+
+  useEffect(() => {
+    if (!selectedAgent) return;
+    const refreshed = agents.find((agent) => agent.id === selectedAgent.id);
+    if (refreshed) {
+      setSelectedAgent(refreshed);
+      setOpenclawAgentIdInput(refreshed.openclawAgentId || '');
+    }
+  }, [agents, selectedAgent?.id]);
 
   const fetchAgents = async () => {
     setIsLoading(true);
@@ -40,30 +70,71 @@ export default function TeamPage() {
   const handleCreateAgent = async (data: any) => {
     await createAgent({
       ...data,
-      createdBy: 'user-id-placeholder',
+      createdBy: PERFORMED_BY,
     });
     await fetchAgents();
   };
 
   const handleUpdateAgent = async (id: string, data: any) => {
-    await updateAgent(id, data, 'user-id-placeholder');
+    await updateAgent(id, data, PERFORMED_BY);
     await fetchAgents();
   };
 
   const handleDeleteAgent = async (id: string) => {
     if (confirm('Are you sure you want to delete this agent?')) {
-      await deleteAgent(id, 'user-id-placeholder');
+      await deleteAgent(id, PERFORMED_BY);
       await fetchAgents();
     }
   };
 
   const handleAssignTask = async (taskId: string, agentId: string) => {
-    await quickAssignTask(taskId, agentId, 'user-id-placeholder');
+    await quickAssignTask(taskId, agentId, PERFORMED_BY);
     await fetchAgents(); // Refresh agents to show updated status
   };
 
   const handleEditAgent = (agent: any) => {
     setSelectedAgent(agent);
+    setOpenclawAgentIdInput(agent.openclawAgentId || '');
+  };
+
+  const handleLinkOpenClaw = async () => {
+    if (!selectedAgent) return;
+    setIsLinking(true);
+    try {
+      await linkOpenClawAgent(selectedAgent.id, openclawAgentIdInput, PERFORMED_BY, true);
+      await fetchAgents();
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleUnlinkOpenClaw = async () => {
+    if (!selectedAgent) return;
+    setIsLinking(true);
+    try {
+      await unlinkOpenClawAgent(selectedAgent.id, PERFORMED_BY);
+      setOpenclawAgentIdInput('');
+      await fetchAgents();
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleValidateOpenClaw = async () => {
+    if (!selectedAgent) return;
+    setIsLinking(true);
+    try {
+      await validateOpenClawAgentLink(selectedAgent.id, PERFORMED_BY);
+      await fetchAgents();
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleListOpenClaw = async () => {
+    const options = await listOpenClawAgents(PERFORMED_BY);
+    setOpenclawOptions(options);
+    setIsOpenClawModalOpen(true);
   };
 
   const filteredAgents = agents.filter(agent =>
@@ -81,6 +152,10 @@ export default function TeamPage() {
     acc[role].push(agent);
     return acc;
   }, {} as Record<string, typeof agents>);
+
+  const alsoLinkedAgents = selectedAgent?.openclawAgentId
+    ? agents.filter((agent) => agent.id !== selectedAgent.id && agent.openclawAgentId === selectedAgent.openclawAgentId)
+    : [];
 
   const actions = (
     <div className="flex items-center gap-3">
@@ -253,6 +328,9 @@ export default function TeamPage() {
                     <p className="text-sm text-gray-500 capitalize">
                       {(selectedAgent.config as any)?.role || 'Agent'} • {selectedAgent.status}
                     </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      OpenClaw: {openClawLinkStatusLabels[selectedAgent.openclawLinkStatus || 'UNLINKED']}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -346,6 +424,108 @@ export default function TeamPage() {
                   </div>
                 )}
               </div>
+
+              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">OpenClaw Link</h3>
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">OpenClaw Agent ID</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={openclawAgentIdInput}
+                      onChange={(e) => setOpenclawAgentIdInput(e.target.value)}
+                      placeholder="oc-agent-123"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={handleLinkOpenClaw}
+                      disabled={isLinking || !openclawAgentIdInput.trim()}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                    >
+                      <Link2 className="h-4 w-4" />
+                      Link
+                    </button>
+                    <button
+                      onClick={handleListOpenClaw}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      Select from OpenClaw...
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleValidateOpenClaw}
+                    disabled={isLinking || !selectedAgent.openclawAgentId}
+                    className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Validate
+                  </button>
+                  <button
+                    onClick={handleUnlinkOpenClaw}
+                    disabled={isLinking || !selectedAgent.openclawAgentId}
+                    className="inline-flex items-center gap-2 px-3 py-2 border border-red-200 text-red-700 rounded-lg text-sm disabled:opacity-50"
+                  >
+                    <Unlink2 className="h-4 w-4" />
+                    Unlink
+                  </button>
+                </div>
+
+                {selectedAgent.openclawAgentId && (
+                  <div className="text-sm text-gray-600">
+                    Current Link: <span className="font-mono">{selectedAgent.openclawAgentId}</span> ({openClawLinkStatusLabels[selectedAgent.openclawLinkStatus || 'UNKNOWN']})
+                  </div>
+                )}
+              </div>
+
+              {selectedAgent.openclawAgentId && (
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Also linked by</h3>
+                  {alsoLinkedAgents.length === 0 ? (
+                    <p className="text-sm text-gray-500">No other Mission Control agents use this OpenClaw Agent ID.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {alsoLinkedAgents.map((agent) => (
+                        <div key={agent.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                          <span className="font-medium text-gray-900">{agent.name}</span>
+                          <span className="text-gray-500">{openClawLinkStatusLabels[agent.openclawLinkStatus || 'UNKNOWN']}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isOpenClawModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-gray-200 w-full max-w-md max-h-[70vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Select OpenClaw Agent</h3>
+              <button onClick={() => setIsOpenClawModalOpen(false)} className="text-sm text-gray-500">Close</button>
+            </div>
+            <div className="p-4 space-y-2">
+              {openclawOptions.length === 0 ? (
+                <p className="text-sm text-gray-500">No OpenClaw agents available from list endpoint.</p>
+              ) : (
+                openclawOptions.map((agent) => (
+                  <button
+                    key={agent.id}
+                    onClick={() => {
+                      setOpenclawAgentIdInput(agent.id);
+                      setIsOpenClawModalOpen(false);
+                    }}
+                    className="w-full text-left border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+                  >
+                    <p className="font-medium text-gray-900">{agent.name || agent.id}</p>
+                    <p className="text-xs text-gray-500 font-mono">{agent.id}</p>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </div>
