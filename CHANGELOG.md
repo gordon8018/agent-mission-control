@@ -3,6 +3,12 @@
 All notable changes to the Mission Control project.
 
 
+### ✨ PR2 - Swarm read-only UI screens
+- Added `/swarm` dashboard page with sections for Active Runs, PR Queue, Ready to Merge, and Failures.
+- Added `/swarm/[id]` detail page showing worktrees, sessions, PR metadata, checks, and last errors.
+- Added reusable Swarm UI components: `SwarmRunCard`, `SwarmRunStatusBadge`, `SwarmPRCard`, and `SwarmChecksPanel`.
+- Added Swarm route handlers and batched data query helpers with fallback seeded dummy data when Swarm tables are unavailable.
+- Added Swarm entry in the primary sidebar navigation.
 
 ### 🚧 PR1 - Swarm orchestration data model + baseline APIs
 - Added Prisma swarm orchestration enums and models: `SwarmRun`, `SwarmWorktree`, `SwarmSession`, `SwarmPR`, `SwarmCheck`, and `OrchestratorSetting`.
