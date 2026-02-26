@@ -3,6 +3,18 @@
 All notable changes to the Mission Control project.
 
 
+
+### 🚧 PR1 - Swarm orchestration data model + baseline APIs
+- Added Prisma swarm orchestration enums and models: `SwarmRun`, `SwarmWorktree`, `SwarmSession`, `SwarmPR`, `SwarmCheck`, and `OrchestratorSetting`.
+- Added SQL migration `20260226_pr1_swarm_orchestration.sql` with all new tables, enum types, and foreign keys.
+- Added required indexes for run/task status lookups, PR tracking, and PR check fan-out.
+- Added baseline swarm API handlers:
+  - `POST /api/swarm/start` to create a running swarm run
+  - `POST /api/swarm/[runId]/retry` to mark retry requested
+  - `GET /api/swarm/active` to list active runs
+  - `POST /api/swarm/[runId]/update` to accept orchestrator status snapshots via `x-orchestrator-token`
+- Added swarm activity events: `swarm.run_created` and `swarm.status_updated`.
+
 ### 🚧 PR4 - Workflow Policy Engine
 - Added a centralized workflow policy engine (`getTemplate`, `getColumnRules`, `validateMove`) to enforce column/task compatibility, required artifacts, and required gates from DB-backed metadata.
 - Added run-based gate checks that validate successful runs by task/run type when boolean gates are not present on the task payload.

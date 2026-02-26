@@ -56,6 +56,46 @@ enum OpenclawLinkStatus {
   UNKNOWN
 }
 
+enum SwarmRunStatus {
+  PENDING
+  RUNNING
+  RETRY_REQUESTED
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum SwarmWorktreeStatus {
+  PROVISIONING
+  READY
+  DIRTY
+  ARCHIVED
+  FAILED
+}
+
+enum SwarmSessionStatus {
+  STARTING
+  ACTIVE
+  IDLE
+  COMPLETED
+  FAILED
+}
+
+enum SwarmPRStatus {
+  DRAFT
+  OPEN
+  MERGED
+  CLOSED
+}
+
+enum SwarmCheckStatus {
+  QUEUED
+  RUNNING
+  PASSED
+  FAILED
+  SKIPPED
+}
+
 // Users
 model User {
   id        String   @id @default(uuid())
@@ -148,6 +188,7 @@ model Task {
   createdBy       User       @relation("TaskCreator", fields: [createdById], references: [id])
 
   memories Memory[] @relation("MemoriesForTask")
+  swarmRuns SwarmRun[]
 
   @@unique([columnId, position])
   @@index([columnId, status])
@@ -268,4 +309,102 @@ model Activity {
   @@index([performedBy])
   @@index([createdAt])
   @@map("activity")
+}
+
+model SwarmRun {
+  id            String         @id @default(uuid())
+  taskId        String
+  status        SwarmRunStatus @default(PENDING)
+  snapshot      Json?
+  retryRequested Boolean       @default(false)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  task       Task                  @relation(fields: [taskId], references: [id])
+  worktrees  SwarmWorktree[]
+  sessions   SwarmSession[]
+  prs        SwarmPR[]
+
+  @@index([taskId, status])
+  @@map("swarm_runs")
+}
+
+model SwarmWorktree {
+  id        String             @id @default(uuid())
+  swarmRunId String
+  branch    String?
+  path      String?
+  status    SwarmWorktreeStatus @default(PROVISIONING)
+  metadata  Json?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  swarmRun SwarmRun @relation(fields: [swarmRunId], references: [id])
+
+  @@index([swarmRunId])
+  @@map("swarm_worktrees")
+}
+
+model SwarmSession {
+  id         String             @id @default(uuid())
+  swarmRunId String
+  externalId String?
+  status     SwarmSessionStatus @default(STARTING)
+  metadata   Json?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  swarmRun SwarmRun @relation(fields: [swarmRunId], references: [id])
+
+  @@index([swarmRunId])
+  @@map("swarm_sessions")
+}
+
+model SwarmPR {
+  id         String        @id @default(uuid())
+  swarmRunId String
+  repo       String?
+  prNumber   Int?
+  status     SwarmPRStatus @default(DRAFT)
+  title      String?
+  url        String?
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  swarmRun SwarmRun    @relation(fields: [swarmRunId], references: [id])
+  checks   SwarmCheck[]
+
+  @@index([prNumber])
+  @@index([status])
+  @@map("swarm_prs")
+}
+
+model SwarmCheck {
+  id        String           @id @default(uuid())
+  swarmPrId String
+  name      String
+  status    SwarmCheckStatus @default(QUEUED)
+  details   String?          @db.Text
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  swarmPr SwarmPR @relation(fields: [swarmPrId], references: [id])
+
+  @@index([swarmPrId])
+  @@map("swarm_checks")
+}
+
+model OrchestratorSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("orchestrator_settings")
 }
