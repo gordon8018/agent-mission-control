@@ -4,6 +4,13 @@ All notable changes to the Mission Control project.
 
 ## [Unreleased]
 
+### ✨ PR2 - Workflow seed for shared/dev/research flows
+- Added `prisma/seed-workflows.ts` to seed shared columns (`Backlog`, `Ready`, `Blocked`, `Done`) with `task_type = null` and deterministic `ord`.
+- Added dev flow columns and constraints metadata (`required_artifacts`, `required_gates`) for `In Dev`, `In Review`, `In Test`, and `In Deploy`.
+- Added research flow columns for `Scoping`, `Researching`, `Synthesis`, and `Review`, including required artifacts for synthesis/review stages.
+- Added idempotent seeding for workflow templates: `Dev Flow` and `Research Flow`, referencing seeded stage column IDs and stage rules.
+- Added `npm run db:seed-workflows` script and README instructions for running the workflow seed.
+- Added initial flow docs in `docs/workflows/dev_flow.md` and `docs/workflows/research_flow.md`.
 ### PR1 - Workflows + OpenClaw Mapping
 
 #### Database
