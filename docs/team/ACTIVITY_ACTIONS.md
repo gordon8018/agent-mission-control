@@ -63,6 +63,9 @@
 - `agent.openclaw_relinked` - When an agent mapping changes from one OpenClaw id to another
 - `agent.openclaw_validation_succeeded` - When external OpenClaw validation succeeds
 - `agent.openclaw_validation_failed` - When external OpenClaw validation fails
+- `swarm.run_created` - When a swarm run is created
+- `swarm.status_updated` - When a swarm run status changes
+- `swarm.mapping_selected` - When swarm start mapping selection is resolved (MC agent and/or OpenClaw id)
 
 ---
 

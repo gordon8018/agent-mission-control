@@ -89,7 +89,7 @@ async function updateTask(taskId: string, status: 'OPEN' | 'IN_PROGRESS' | 'DONE
       status,
       columnId: column?.id,
       ...(status === 'DONE' ? { completedAt: new Date() } : {}),
-      ...(status === 'IN_PROGRESS' && status !== 'DONE' ? { startedAt: new Date() } : {}),
+      ...(status === 'IN_PROGRESS' ? { startedAt: new Date() } : {}),
     },
     include: {
       assignedToAgent: true,

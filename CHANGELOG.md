@@ -2,7 +2,6 @@
 
 All notable changes to the Mission Control project.
 
-
 ### 🚧 PR5 - OpenClaw orchestrator ingestion endpoints
 - Added authenticated ingestion endpoints for orchestrator push updates:
   - `POST /api/swarm/[runId]/worktree`
@@ -15,12 +14,16 @@ All notable changes to the Mission Control project.
 - Reduced activity spam by writing swarm activity entries only for significant state changes.
 
 
-### ✨ PR2 - Swarm read-only UI screens
-- Added `/swarm` dashboard page with sections for Active Runs, PR Queue, Ready to Merge, and Failures.
-- Added `/swarm/[id]` detail page showing worktrees, sessions, PR metadata, checks, and last errors.
-- Added reusable Swarm UI components: `SwarmRunCard`, `SwarmRunStatusBadge`, `SwarmPRCard`, and `SwarmChecksPanel`.
-- Added Swarm route handlers and batched data query helpers with fallback seeded dummy data when Swarm tables are unavailable.
-- Added Swarm entry in the primary sidebar navigation.
+### 🚧 PR4 - Swarm start OpenClaw mapping integration
+- Updated `POST /api/swarm/start` to accept optional `mcAgentId` and `openclawAgentId`.
+- Added mapping resolution logic: when `mcAgentId` is provided, Mission Control resolves `Agent.openclawAgentId` and stores it on the run.
+- Extended `SwarmRun` with `orchestrator_agent_id` and `block_reason`; run creation now succeeds even when unresolved, but marks the run blocked with `"No OpenClaw agent linked"`.
+- Added swarm mapping activity event (`swarm.mapping_selected`) and enriched `swarm.run_created` payload details.
+- Added task detail UI controls to start swarm with:
+  - MC Agent dropdown showing link status/OpenClaw id
+  - direct OpenClaw agent id override input
+  - explicit mapping error when starting without a valid mapping
+- Added SQL migration `20260226_pr4_swarm_openclaw_mapping.sql` for new `swarm_runs` columns/index.
 
 
 ### 🚧 PR3 - Swarm Definition-of-Done evaluation
@@ -28,6 +31,14 @@ All notable changes to the Mission Control project.
 - Added API endpoint `POST /api/swarm/[prId]/evaluate` to evaluate DoD inputs and persist each evaluation snapshot to `swarm_checks`.
 - Added `OrchestratorSetting` fields for DoD policy control: `screenshotRequired` and `requiredReviews` (`codex/gemini/claude`).
 - Added SQL migration `20260226_pr3_dod_evaluation.sql` and unit tests for DoD evaluation behavior.
+
+
+### ✨ PR2 - Swarm read-only UI screens
+- Added `/swarm` dashboard page with sections for Active Runs, PR Queue, Ready to Merge, and Failures.
+- Added `/swarm/[id]` detail page showing worktrees, sessions, PR metadata, checks, and last errors.
+- Added reusable Swarm UI components: `SwarmRunCard`, `SwarmRunStatusBadge`, `SwarmPRCard`, and `SwarmChecksPanel`.
+- Added Swarm route handlers and batched data query helpers with fallback seeded dummy data when Swarm tables are unavailable.
+- Added Swarm entry in the primary sidebar navigation.
 
 ### 🚧 PR1 - Swarm orchestration data model + baseline APIs
 - Added Prisma swarm orchestration enums and models: `SwarmRun`, `SwarmWorktree`, `SwarmSession`, `SwarmPR`, `SwarmCheck`, and `OrchestratorSetting`.

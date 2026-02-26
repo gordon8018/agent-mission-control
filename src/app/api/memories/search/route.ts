@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { searchMemories } from '../actions';
+import { searchMemories } from '@/app/memory/actions';
 
 export async function POST(request: Request) {
   try {
