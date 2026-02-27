@@ -10,6 +10,12 @@ All orchestrator ingestion endpoints require:
 
 If token is missing or invalid, APIs return `401 Unauthorized`.
 
+## Related Documentation
+
+- [Swarm Control Plane Overview](./overview.md)
+- [Swarm Definition of Done](./dod.md)
+- [Swarm Manual Acceptance](./manual_acceptance.md)
+
 ## Endpoints
 
 ### `POST /api/swarm/:runId/worktree`
