@@ -14,6 +14,16 @@ export async function GET(
         assignedToUser: { select: { id: true, name: true, email: true } },
         assignedToAgent: { select: { id: true, name: true, status: true } },
         createdBy: { select: { id: true, name: true } },
+        swarmRuns: {
+          select: {
+            id: true,
+            runType: true,
+            status: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        },
       },
     });
 

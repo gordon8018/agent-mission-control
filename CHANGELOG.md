@@ -3,6 +3,14 @@
 All notable changes to the Mission Control project.
 
 
+### 🚧 PR6 - Workflow orchestration + Swarm execution linking
+- Added `SwarmRunType` enum and `swarm_runs.run_type` persistence (`FEATURE|BUGFIX|TEST|DEPLOY|REVIEW`) with migration/index support.
+- Updated `POST /api/swarm/start` to require `runType` (`test` or `deploy`) and persist it on created swarm runs.
+- Updated task detail payloads to include recent linked swarm runs (`id`, `runType`, `status`, `createdAt`).
+- Updated task detail UI so Swarm CTA appears only for DEV tasks in `In Test` (`Start Swarm Test Run`) and `In Deploy` (`Start Swarm Deploy Run`).
+- Added linked-run visibility from task detail and a back-link from Swarm run detail to the linked task detail route.
+
+
 ### 🚧 PR4 - Swarm start OpenClaw mapping integration
 - Updated `POST /api/swarm/start` to accept optional `mcAgentId` and `openclawAgentId`.
 - Added mapping resolution logic: when `mcAgentId` is provided, Mission Control resolves `Agent.openclawAgentId` and stores it on the run.

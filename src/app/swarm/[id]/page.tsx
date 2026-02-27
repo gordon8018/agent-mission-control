@@ -5,6 +5,7 @@ import { SwarmChecksPanel } from '@/components/swarm/swarm-checks-panel';
 import { SwarmPRCard } from '@/components/swarm/swarm-pr-card';
 import { SwarmRunStatusBadge } from '@/components/swarm/swarm-run-status-badge';
 import { getSwarmRunById } from '@/lib/swarm/queries';
+import { prisma } from '@/lib/prisma';
 
 export default async function SwarmRunDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,11 +14,20 @@ export default async function SwarmRunDetailPage({ params }: { params: Promise<{
   if (!run) {
     notFound();
   }
+  const runTaskLink = await prisma.swarmRun.findUnique({
+    where: { id },
+    select: { taskId: true },
+  });
 
   return (
     <PageLayout title={`Swarm Run ${run.id}`} currentPath="/swarm">
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-4">
         <Link href="/swarm" className="text-sm font-medium text-blue-700 hover:underline">← Back to Swarm</Link>
+        {runTaskLink?.taskId && (
+          <Link href={`/tasks?taskId=${runTaskLink.taskId}`} className="text-sm font-medium text-blue-700 hover:underline">
+            View linked task
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

@@ -96,6 +96,14 @@ enum SwarmCheckStatus {
   SKIPPED
 }
 
+enum SwarmRunType {
+  FEATURE
+  BUGFIX
+  TEST
+  DEPLOY
+  REVIEW
+}
+
 // Users
 model User {
   id        String   @id @default(uuid())
@@ -314,6 +322,7 @@ model Activity {
 model SwarmRun {
   id                  String         @id @default(uuid())
   taskId              String
+  runType             SwarmRunType   @default(TEST) @map("run_type")
   status              SwarmRunStatus @default(PENDING)
   orchestratorAgentId String?        @map("orchestrator_agent_id")
   blockReason         String?        @map("block_reason")
@@ -330,6 +339,7 @@ model SwarmRun {
   prs        SwarmPR[]
 
   @@index([taskId, status])
+  @@index([runType])
   @@index([orchestratorAgentId])
   @@map("swarm_runs")
 }

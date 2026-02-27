@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
@@ -23,6 +24,7 @@ export default function TasksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filters, setFilters] = useState<any>({});
+  const searchParams = useSearchParams();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -41,6 +43,22 @@ export default function TasksPage() {
   useEffect(() => {
     fetchData();
   }, [filters]);
+
+  useEffect(() => {
+    const taskId = searchParams.get('taskId');
+    if (!taskId) return;
+
+    void fetch(`/api/tasks/${taskId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((task) => {
+        if (!task) return;
+        setSelectedTask(task);
+        setIsDetailDrawerOpen(true);
+      })
+      .catch((error) => {
+        console.error('Failed to open task from URL:', error);
+      });
+  }, [searchParams]);
 
   const fetchData = async () => {
     setIsLoading(true);
