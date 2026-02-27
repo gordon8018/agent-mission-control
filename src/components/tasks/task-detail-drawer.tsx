@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { X, Save, Trash2, Plus, FileText, Calendar, Tag, User, Bot, Clock, CheckCircle, Circle, AlertCircle, Play } from 'lucide-react';
 import { Task, TaskPriority, TaskStatus } from '@prisma/client';
 
@@ -9,9 +10,15 @@ interface TaskDetailDrawerProps {
   onClose: () => void;
   task: Task & {
     column: { id: string; name: string; color?: string };
-    assignedToUser?: { id: string; name: string };
-    assignedToAgent?: { id: string; name: string };
+    assignedToUser?: { id: string; name: string; email?: string };
+    assignedToAgent?: { id: string; name: string; status?: string };
     createdBy?: { id: string; name: string };
+    swarmRuns?: Array<{
+      id: string;
+      runType: 'FEATURE' | 'BUGFIX' | 'TEST' | 'DEPLOY' | 'REVIEW';
+      status: 'PENDING' | 'RUNNING' | 'RETRY_REQUESTED' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+      createdAt: string | Date;
+    }>;
   };
   onUpdate: (id: string, data: any) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -33,6 +40,7 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
   const [manualOpenClawAgentId, setManualOpenClawAgentId] = useState('');
   const [isStartingSwarm, setIsStartingSwarm] = useState(false);
   const [swarmMessage, setSwarmMessage] = useState<string | null>(null);
+  const [latestSwarmRunId, setLatestSwarmRunId] = useState<string | null>(null);
   const [swarmError, setSwarmError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,6 +67,20 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
   const tags = (task.artifacts as any)?.tags || [];
   const artifacts = (task.artifacts as any)?.artifacts || [];
 
+  const stageSwarmConfig = useMemo(() => {
+    if (task.taskType !== 'DEV') return null;
+
+    if (task.column.name === 'In Test') {
+      return { buttonLabel: 'Start Swarm Test Run', runType: 'test' as const };
+    }
+
+    if (task.column.name === 'In Deploy') {
+      return { buttonLabel: 'Start Swarm Deploy Run', runType: 'deploy' as const };
+    }
+
+    return null;
+  }, [task.column.name, task.taskType]);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -84,7 +106,12 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
   };
 
   const handleStartSwarm = async () => {
+    if (!stageSwarmConfig) {
+      setSwarmError('Swarm runs can only be started in In Test or In Deploy for dev tasks.');
+      return;
+    }
     setSwarmMessage(null);
+    setLatestSwarmRunId(null);
     setSwarmError(null);
 
     const selectedAgent = mcAgents.find((agent) => agent.id === selectedMcAgentId);
@@ -105,6 +132,7 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
           taskId: task.id,
           mcAgentId: selectedMcAgentId || undefined,
           openclawAgentId: manualInput || undefined,
+          runType: stageSwarmConfig?.runType,
         }),
       });
       const result = await response.json();
@@ -117,7 +145,8 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
       if (result.blocked) {
         setSwarmError(result.blockReason || 'Swarm run is blocked due to missing OpenClaw mapping.');
       } else {
-        setSwarmMessage(`Swarm run started (${result.runId}) with OpenClaw agent ${result.orchestratorAgentId}.`);
+        setLatestSwarmRunId(result.runId);
+        setSwarmMessage(`Swarm ${result.runType?.toLowerCase?.() || stageSwarmConfig?.runType || 'run'} started with OpenClaw agent ${result.orchestratorAgentId}.`);
       }
     } catch (error) {
       console.error('Failed to start swarm run:', error);
@@ -337,6 +366,7 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
         </div>
 
         {/* Metadata */}
+        {stageSwarmConfig && (
         <div className="pt-4 border-t">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">Swarm Orchestrator</label>
@@ -346,7 +376,7 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
               className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Play className="h-4 w-4" />
-              {isStartingSwarm ? 'Starting...' : 'Start Swarm'}
+              {isStartingSwarm ? 'Starting...' : stageSwarmConfig.buttonLabel}
             </button>
           </div>
           <p className="text-xs text-gray-500 mb-3">
@@ -376,9 +406,32 @@ export function TaskDetailDrawer({ isOpen, onClose, task, onUpdate, onDelete }: 
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
-          {swarmMessage && <p className="mt-3 text-sm text-green-600">{swarmMessage}</p>}
+          {swarmMessage && (
+            <p className="mt-3 text-sm text-green-600">
+              {swarmMessage}{' '}
+              {latestSwarmRunId && (
+                <Link href={`/swarm/${latestSwarmRunId}`} className="underline">
+                  View run
+                </Link>
+              )}
+            </p>
+          )}
           {swarmError && <p className="mt-3 text-sm text-red-600">{swarmError}</p>}
+
+          {task.swarmRuns && task.swarmRuns.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-medium text-gray-600 mb-2">Recent swarm runs</p>
+              <div className="space-y-2">
+                {task.swarmRuns.map((run) => (
+                  <Link key={run.id} href={`/swarm/${run.id}`} className="block text-xs text-indigo-700 hover:underline">
+                    {run.runType} · {run.status} · {new Date(run.createdAt).toLocaleString()}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+        )}
 
         <div className="pt-4 border-t">
           <p className="text-xs text-gray-400">

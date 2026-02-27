@@ -5,14 +5,19 @@ import { logSwarmActivity } from '@/lib/swarm/activity';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { taskId, mcAgentId, openclawAgentId } = body as {
+    const { taskId, mcAgentId, openclawAgentId, runType } = body as {
       taskId?: string;
       mcAgentId?: string;
       openclawAgentId?: string;
+      runType?: 'test' | 'deploy';
     };
 
     if (!taskId) {
       return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
+    }
+
+    if (!runType || !['test', 'deploy'].includes(runType)) {
+      return NextResponse.json({ error: 'runType must be one of: test, deploy' }, { status: 400 });
     }
 
     const task = await prisma.task.findUnique({
@@ -48,6 +53,7 @@ export async function POST(request: Request) {
     const run = await prisma.swarmRun.create({
       data: {
         taskId,
+        runType: runType.toUpperCase() as 'TEST' | 'DEPLOY',
         status: blockReason ? 'PENDING' : 'RUNNING',
         startedAt: blockReason ? null : new Date(),
         orchestratorAgentId: resolvedOpenClawAgentId,
@@ -59,6 +65,7 @@ export async function POST(request: Request) {
         status: true,
         orchestratorAgentId: true,
         blockReason: true,
+        runType: true,
         createdAt: true,
       },
     });
@@ -72,6 +79,7 @@ export async function POST(request: Request) {
         status: run.status,
         orchestratorAgentId: run.orchestratorAgentId,
         blockReason: run.blockReason,
+        runType: run.runType,
         selectedMcAgentId,
         inputOpenClawAgentId: trimmedOpenClawAgentId,
       },
@@ -87,6 +95,7 @@ export async function POST(request: Request) {
         resolvedOpenClawAgentId,
         blocked: Boolean(blockReason),
         blockReason,
+        runType: run.runType,
       },
     });
 
@@ -97,6 +106,7 @@ export async function POST(request: Request) {
         orchestratorAgentId: run.orchestratorAgentId,
         blocked: Boolean(run.blockReason),
         blockReason: run.blockReason,
+        runType: run.runType,
       },
       { status: 201 }
     );
