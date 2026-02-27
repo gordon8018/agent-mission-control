@@ -2,6 +2,16 @@
 
 All notable changes to the Mission Control project.
 
+### 🚧 PR7 - Swarm control plane docs + minimal tests
+- Added Swarm control plane architecture overview in `docs/swarm/overview.md`.
+- Expanded Swarm docs set with:
+  - `docs/swarm/orchestrator_api.md` (linked companion docs)
+  - `docs/swarm/dod.md` (rules, gates, and config)
+  - `docs/swarm/manual_acceptance.md` (step-by-step acceptance checks)
+- Added minimal unit tests for ingestion idempotency key semantics in `src/lib/swarm/ingestion.test.ts`.
+- Added shared ingestion idempotency helpers in `src/lib/swarm/ingestion.ts`.
+- Retained and documented DoD evaluator unit coverage in `src/lib/swarm/dod.test.ts`.
+
 ### 🚧 PR5 - OpenClaw orchestrator ingestion endpoints
 - Added authenticated ingestion endpoints for orchestrator push updates:
   - `POST /api/swarm/[runId]/worktree`
